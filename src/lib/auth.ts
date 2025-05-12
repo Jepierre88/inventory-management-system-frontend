@@ -1,9 +1,35 @@
-import NextAuth from "next-auth"
+import NextAuth, { AuthError, CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { signInSchema } from "./zod"
 import { ZodError } from "zod"
 import CONSTANTS from "@/config/CONSTANTS"
 
+
+class ServerError extends CredentialsSignin {
+  code = "SERVER_ERROR"
+  errorMessage = "Error al conectar con el servidor"
+  constructor(message?: any, errorOptions?: any) {
+    super(message, errorOptions)
+    this.errorMessage = message
+  }
+}
+class UserNotFound extends CredentialsSignin {
+  code = "USER_NOT_FOUND"
+  errorMessage = "Usuario no encontrado"
+  constructor(message?: any, errorOptions?: any) {
+    super(message, errorOptions)
+    this.errorMessage = message
+  }
+}
+
+class InvalidCredentials extends CredentialsSignin {
+  code = "INVALID_CREDENTIALS"
+  errorMessage = "Credenciales inválidas"
+  constructor(message?: any, errorOptions?: any) {
+    super(message, errorOptions)
+    this.errorMessage = message
+  }
+}
 
 declare module "next-auth" {
   interface Session {
@@ -48,6 +74,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           let user = null
 
+          console.log(credentials)
+
 
           const { username, password } = await signInSchema.parseAsync(credentials)
 
@@ -64,24 +92,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const data = await response.json()
 
+          if (response.status === 404) {
+            throw new UserNotFound("Usuario no encontrado.")
+          }
+
+          if (response.status === 401) {
+            throw new InvalidCredentials("Contraseña incorrecta.")
+          }
+
           user = data
-
-          console.log(user)
-
           return user
         } catch (error) {
           if (error instanceof ZodError) {
-            console.log(error.issues)
-            return null
+            throw new Error("Datos inválidos. Revisa tus credenciales.");
           }
           console.log(error)
-          return null
+          throw error
         }
+
       },
 
     })
   ],
   pages: {
-    signIn: "/auth/login"
-  }
+    signIn: "/auth/login",
+    error: "/auth/login",
+  },
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
+  },
 })
