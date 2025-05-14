@@ -100,6 +100,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             throw new InvalidCredentials("Contraseña incorrecta.")
           }
 
+          console.log(data)
+
           user = data
           return user
         } catch (error) {
@@ -111,16 +113,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
       },
-
     })
   ],
   pages: {
-    signIn: "/auth/login",
     error: "/auth/login",
   },
-  callbacks: {
-    async redirect({ url, baseUrl }) {
-      return url.startsWith(baseUrl) ? url : baseUrl;
-    },
+  secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
   },
+  callbacks: {
+    async jwt({ token, user }) {
+      return { ...token, ...user }
+    },
+
+    async session({ session, token }) {
+      session.token = token.token as string
+      session.user = token.user as any
+      return session
+    },
+  }
 })

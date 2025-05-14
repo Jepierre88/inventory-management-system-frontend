@@ -1,16 +1,19 @@
 'use client'
 import { signIn } from "next-auth/react"
 import Image from "next/image"
-import { redirect } from "next/navigation"
+import { redirect, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast, ToastContainer } from "react-toastify"
 
+type FormData = {
+  username: string
+  password: string
+}
+
 export default function LoginPage() {
 
-  type FormData = {
-    username: string
-    password: string
-  }
+  const [errors, setErrors] = useState<string>("")
 
   const form = useForm({
     defaultValues: {
@@ -18,6 +21,8 @@ export default function LoginPage() {
       password: "",
     }
   })
+
+  const router = useRouter()
 
 
   const onSubmit = async (data: FormData) => {
@@ -28,15 +33,13 @@ export default function LoginPage() {
       const response = await signIn("credentials", {
         username,
         password,
-        redirect: false,
+        redirect: false
       })
+      console.log(response)
       if (!response?.error) {
-        redirect("/")
+        router.push("/admin")
       } else {
-        console.log(response.error)
-        toast("Credenciales incorrectas", {
-          type: "error"
-        })
+        setErrors("Credenciales incorrectas")
       }
       if (!response.ok) {
         throw new Error("Error al iniciar sesión")
@@ -45,6 +48,22 @@ export default function LoginPage() {
       console.log(error)
     }
   }
+
+
+  //LIMPIEZA DE ERRORES
+  useEffect(() => {
+    if (errors) {
+      const errorTimeout = setTimeout(() => {
+        setErrors("")
+      }, 5000)
+      return () => {
+        clearTimeout(errorTimeout)
+      }
+    }
+    return () => {
+    }
+  }, [errors])
+
 
   return (
     <main>
@@ -59,7 +78,7 @@ export default function LoginPage() {
             width={300}
             height={300}
           /> */}
-          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
+          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white">
             Inicia sesión en tu cuenta
           </h2>
         </header>
@@ -67,7 +86,7 @@ export default function LoginPage() {
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="credentials-username" className="block text-sm/6 font-medium text-gray-900">
+              <label htmlFor="credentials-username" className="block text-sm/6 font-medium text-gray-900 dark:text-white">
                 Nombre de usuario
                 <input type="text" id="credentials-username"
                   autoComplete="username"
@@ -77,7 +96,7 @@ export default function LoginPage() {
               </label>
             </div>
             <div className="flex items-center justify-between">
-              <label htmlFor="credentials-password" className="block text-sm/6 font-medium text-gray-900">
+              <label htmlFor="credentials-password" className="block text-sm/6 font-medium text-gray-900 dark:text-white">
                 Contraseña
               </label>
             </div>
@@ -96,6 +115,7 @@ export default function LoginPage() {
               >
                 Iniciar sesión
               </button>
+              {errors && <p className="text-red-500 text-center my-3">{errors}</p>}
             </div>
           </form>
         </div>
